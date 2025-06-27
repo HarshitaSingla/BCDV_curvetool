@@ -32,9 +32,9 @@
               "node_modules/leaflet/dist/leaflet.css"
             ],
             "scripts": [
-              "node_modules/leaflet/dist/leaflet.js",
-              "src/assets/leaflet.curve.js",
-              "src/assets/leaflet.editable.js"
+           "node_modules/leaflet/dist/leaflet.js",
+  "node_modules/leaflet-editable/src/Leaflet.Editable.js",
+     "src/assets/leaflet.curve.js"
             ]
           },
           "configurations": {

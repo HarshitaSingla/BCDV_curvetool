@@ -40,16 +40,25 @@
 
 
 
+// 20 june 2025 (up(working fine but only 1 segment))
+
+// 
+
+
+//21 June 2025 (working well(no height elevation data rn))
+
+
 package com.bezier.bezier_backend;
 
 import com.bezier.bezier_backend.model.EllipseInput;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:4200") // Allow requests from Angular
+@CrossOrigin(origins = "http://localhost:4200") // Allow requests from Angular app
 public class HelloController {
 
     @GetMapping("/hello")
@@ -64,28 +73,69 @@ public class HelloController {
                ", center: (" + input.getCenterX() + ", " + input.getCenterY() + ")";
     }
 
-    // ✅ New Endpoint
     @PostMapping("/bezier")
-    public ResponseEntity<Map<String, List<List<Double>>>> getBezierCurve(@RequestBody EllipseInput input) {
+    public ResponseEntity<Map<String, List<List<List<Double>>>>> getBezierCurve(@RequestBody EllipseInput input) {
         double a = input.getSemiMajor();
         double b = input.getSemiMinor();
         double cx = input.getCenterX();
         double cy = input.getCenterY();
 
-        // Approximation coefficient for a quarter ellipse Bézier curve
         double k = 4 * (Math.sqrt(2) - 1) / 3;
+        List<List<List<Double>>> bezierSegments = new ArrayList<>();
 
-        List<List<Double>> bezier = new ArrayList<>();
-        bezier.add(Arrays.asList(cx + a, cy));             // P0
-        bezier.add(Arrays.asList(cx + a, cy + k * b));     // P1
-        bezier.add(Arrays.asList(cx + k * a, cy + b));     // P2
-        bezier.add(Arrays.asList(cx, cy + b));             // P3
+        bezierSegments.add(Arrays.asList(
+            Arrays.asList(cx + a, cy),
+            Arrays.asList(cx + a, cy + k * b),
+            Arrays.asList(cx + k * a, cy + b),
+            Arrays.asList(cx, cy + b)
+        ));
 
-        Map<String, List<List<Double>>> response = new HashMap<>();
-        response.put("bezierCurve", bezier);
+        bezierSegments.add(Arrays.asList(
+            Arrays.asList(cx, cy + b),
+            Arrays.asList(cx - k * a, cy + b),
+            Arrays.asList(cx - a, cy + k * b),
+            Arrays.asList(cx - a, cy)
+        ));
+
+        bezierSegments.add(Arrays.asList(
+            Arrays.asList(cx - a, cy),
+            Arrays.asList(cx - a, cy - k * b),
+            Arrays.asList(cx - k * a, cy - b),
+            Arrays.asList(cx, cy - b)
+        ));
+
+        bezierSegments.add(Arrays.asList(
+            Arrays.asList(cx, cy - b),
+            Arrays.asList(cx + k * a, cy - b),
+            Arrays.asList(cx + a, cy - k * b),
+            Arrays.asList(cx + a, cy)
+        ));
+
+        Map<String, List<List<List<Double>>>> response = new HashMap<>();
+        response.put("bezierCurve", bezierSegments);
 
         return ResponseEntity.ok(response);
     }
+    @GetMapping("/bezier")
+public String explainBezier() {
+    return "Use POST with JSON body to get Bezier curve.";
 }
 
+    // ✅ Elevation endpoint expected by Angular: /api/check-elevation
+    @GetMapping("/api/check-elevation")
+    public ResponseEntity<String> checkElevation(
+            @RequestParam double lat,
+            @RequestParam double lon,
+            @RequestParam(defaultValue = "2000") double threshold
+    ) {
+        String url = String.format("http://localhost:8001/check?lat=%f&lon=%f&threshold=%f", lat, lon, threshold);
+        RestTemplate restTemplate = new RestTemplate();
 
+        try {
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Failed to fetch elevation: " + e.getMessage());
+        }
+    }
+}
